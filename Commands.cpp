@@ -9,8 +9,6 @@
 
 using namespace std;
 
-// Arik and Shlomi
-
 const std::string WHITESPACE = " \n\r\t\f\v";
 
 #if 0
