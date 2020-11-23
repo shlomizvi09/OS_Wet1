@@ -86,6 +86,7 @@ void _removeBackgroundSign(char* cmd_line) {
 
 SmallShell::SmallShell() {
 // TODO: add your implementation
+  this->chpromopt_name= "smash> ";
 }
 
 SmallShell::~SmallShell() {
@@ -98,7 +99,7 @@ SmallShell::~SmallShell() {
 Command * SmallShell::CreateCommand(const char* cmd_line) {
 	// For example:
 /*
-  string cmd_s = string(cmd_line);
+  
   if (cmd_s.find("pwd") == 0) {
     return new GetCurrDirCommand(cmd_line);
   }
@@ -117,4 +118,8 @@ void SmallShell::executeCommand(const char *cmd_line) {
   // Command* cmd = CreateCommand(cmd_line);
   // cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
+}
+
+void SmallShell::changeChpromptName(string new_name){
+  this->chpromopt_name = new_name;
 }

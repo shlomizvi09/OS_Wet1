@@ -7,8 +7,11 @@
 #define COMMAND_MAX_ARGS (20)
 #define HISTORY_MAX_RECORDS (50)
 
+using namespace std;
+
 class Command {
 // TODO: Add your data members
+  string cmd_line;
  public:
   Command(const char* cmd_line);
   virtual ~Command();
@@ -71,6 +74,7 @@ class ShowPidCommand : public BuiltInCommand {
 };
 
 class JobsList;
+
 class QuitCommand : public BuiltInCommand {
 // TODO: Add your data members public:
   QuitCommand(const char* cmd_line, JobsList* jobs);
@@ -154,9 +158,24 @@ class BackgroundCommand : public BuiltInCommand {
 // TODO: add more classes if needed 
 // maybe ls, timeout ?
 
+class ChangeChpromptCommand : public BuiltInCommand {
+ public:
+  ChangeChpromptCommand(const char* cmd_line);
+  virtual ~ChangeChpromptCommand() {}
+  void execute() override;
+};
+
+class LsCommand : public BuiltInCommand {
+ public:
+  LsCommand(const char* cmd_line);
+  virtual ~LsCommand() {}
+  void execute() override;
+};
+
 class SmallShell {
  private:
   // TODO: Add your data members
+  string chpromopt_name;  
   SmallShell();
  public:
   Command *CreateCommand(const char* cmd_line);
@@ -170,6 +189,7 @@ class SmallShell {
   }
   ~SmallShell();
   void executeCommand(const char* cmd_line);
+  void changeChpromptName(string new_name);
   // TODO: add extra methods as needed
 };
 
