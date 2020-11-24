@@ -93,7 +93,7 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command* SmallShell::CreateCommand(const char* cmd_line) {
-    char** args = (char**)malloc(sizeof(char*));
+    char** args = new char*;
     int num_of_args = _parseCommandLine(cmd_line, args);
     if (strcmp(args[0], "chprompt") == 0) {
         if (num_of_args <= 1) {
