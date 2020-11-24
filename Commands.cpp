@@ -82,8 +82,8 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h
 
-SmallShell::SmallShell(){}
-    // TODO: add your implementation
+SmallShell::SmallShell() : prompt_name("smash"){}
+// TODO: add your implementation
 
 SmallShell::~SmallShell() {
     // TODO: add your implementation
@@ -93,16 +93,13 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command* SmallShell::CreateCommand(const char* cmd_line) {
-    char** args;
+    char** args = (char**)malloc(sizeof(char*));
     int num_of_args = _parseCommandLine(cmd_line, args);
-    if (strcmp(args[0],"chprompt")==0){
-        if(num_of_args<=1){
-            char default_prompt_name[]= "smash> ";
-            this->changePromptName(string(default_prompt_name));
-        }
-        else
-        {
-            this->changePromptName(string(args[1]));
+    if (strcmp(args[0], "chprompt") == 0) {
+        if (num_of_args <= 1) {
+            this->changePromptName("smash> ");
+        } else {
+            this->changePromptName(args[1]);
         }
         return nullptr;
     }
@@ -124,7 +121,9 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
 
 void SmallShell::executeCommand(const char* cmd_line) {
     Command* cmd = CreateCommand(cmd_line);
-    cmd->execute();
+    if (cmd != nullptr) {
+        cmd->execute();
+    }
     // TODO: Add your implementation here
     // for example:
     // Command* cmd = CreateCommand(cmd_line);
@@ -151,6 +150,6 @@ Command::Command() {
 BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
 BuiltInCommand::BuiltInCommand() : Command() {}
 
-string SmallShell::getPromptName(){
+string SmallShell::getPromptName() {
     return this->prompt_name;
 }

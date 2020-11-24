@@ -1,8 +1,8 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
+#include <string>
 #include <string.h>
-
 #include <vector>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
@@ -14,7 +14,7 @@ class Command {
     // TODO: Add your data members
    protected:
     std::string cmd_line;
-
+  
    public:
     Command(const char* cmd_line);
     Command();
@@ -57,21 +57,21 @@ class RedirectionCommand : public Command {
     //void cleanup() override;
 };
 
-class ChangeDirCommand : public BuiltInCommand {
+class ChangeDirCommand : public BuiltInCommand { // Arik
     // TODO: Add your data members public:
     ChangeDirCommand(const char* cmd_line, char** plastPwd);
     virtual ~ChangeDirCommand() {}
     void execute() override;
 };
 
-class GetCurrDirCommand : public BuiltInCommand {
+class GetCurrDirCommand : public BuiltInCommand {  //Arik
    public:
     GetCurrDirCommand(const char* cmd_line);
     virtual ~GetCurrDirCommand() {}
     void execute() override;
 };
 
-class ShowPidCommand : public BuiltInCommand {
+class ShowPidCommand : public BuiltInCommand { //Shlomi
    public:
     ShowPidCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
     virtual ~ShowPidCommand() {}
@@ -172,7 +172,7 @@ class ChangeChpromptCommand : public BuiltInCommand {
 };
 */
 
-class LsCommand : public BuiltInCommand {
+class LsCommand : public BuiltInCommand { //Shlomi
    public:
     LsCommand(const char* cmd_line);
     virtual ~LsCommand() {}
@@ -182,7 +182,9 @@ class LsCommand : public BuiltInCommand {
 class SmallShell {
    private:
     // TODO: Add your data members
-    std::string prompt_name = "smash> ";
+    std::string curr_path;
+    std::string prev_path;
+    std::string prompt_name;
     SmallShell();
 
    public:
