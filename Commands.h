@@ -10,21 +10,25 @@
 using namespace std;
 
 class Command {
-// TODO: Add your data members
-  string cmd_line;
- public:
-  Command(const char* cmd_line);
-  virtual ~Command();
-  virtual void execute() = 0;
-  //virtual void prepare();
-  //virtual void cleanup();
-  // TODO: Add your extra methods if needed
+    // TODO: Add your data members
+   protected:
+    string cmd_line;
+    vector<std::string> args;
+    int num_of_args;
+
+   public:
+    Command(const char* cmd_line);
+    virtual ~Command();
+    virtual void execute() = 0;
+    //virtual void prepare();
+    //virtual void cleanup();
+    // TODO: Add your extra methods if needed
 };
 
 class BuiltInCommand : public Command {
- public:
-  BuiltInCommand(const char* cmd_line);
-  virtual ~BuiltInCommand() {}
+   public:
+    BuiltInCommand(const char* cmd_line) : Command(cmd_line){}
+    virtual ~BuiltInCommand() {}
 };
 
 class ExternalCommand : public Command {
@@ -67,10 +71,10 @@ class GetCurrDirCommand : public BuiltInCommand {
 };
 
 class ShowPidCommand : public BuiltInCommand {
- public:
-  ShowPidCommand(const char* cmd_line);
-  virtual ~ShowPidCommand() {}
-  void execute() override;
+   public:
+    ShowPidCommand(const char* cmd_line) : BuiltInCommand(cmd_line){}
+    virtual ~ShowPidCommand() {}
+    void execute() override;
 };
 
 class JobsList;
