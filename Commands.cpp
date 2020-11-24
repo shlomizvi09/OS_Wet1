@@ -1,6 +1,5 @@
 #include "Commands.h"
 
-#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -83,10 +82,8 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h
 
-SmallShell::SmallShell() {
+SmallShell::SmallShell(){}
     // TODO: add your implementation
-    this->chpromopt_name = "smash> ";
-}
 
 SmallShell::~SmallShell() {
     // TODO: add your implementation
@@ -96,14 +93,21 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command* SmallShell::CreateCommand(const char* cmd_line) {
-    string cmd_s = string(cmd_line);
-    if (cmd_s.find("showpid") == 0) {
-        return new ShowPidCommand(cmd_line);
+    char** args;
+    int num_of_args = _parseCommandLine(cmd_line, args);
+    if (strcmp(args[0],"chprompt")==0){
+        if(num_of_args<=1){
+            char default_prompt_name[]= "smash> ";
+            this->changePromptName(string(default_prompt_name));
+        }
+        else
+        {
+            this->changePromptName(string(args[1]));
+        }
+        return nullptr;
     }
-  
-
-        // For example:
-        /*
+    // For example:
+    /*
   string cmd_s = string(cmd_line);
   if (cmd_s.find("pwd") == 0) {
     return new GetCurrDirCommand(cmd_line);
@@ -114,7 +118,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
     return new ExternalCommand(cmd_line);
   }
   */
-    
+
     return nullptr;
 }
 
@@ -128,20 +132,25 @@ void SmallShell::executeCommand(const char* cmd_line) {
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
-Command::Command(const char* cmd_line) {
-    string cmd = string(cmd_line);
-    this->cmd_line = _ltrim(cmd);
-    char** args;
-    this->num_of_args = _parseCommandLine(cmd_line, args);
-    int i = 1;
-    while (args[i] != nullptr) {
-        this->args.push_back(string(args[i]));
-    }
-}
-
 void ShowPidCommand::execute() {
     std::cout << "smash pid is " << getpid() << endl;
 }
-void SmallShell::changeChpromptName(string new_name) {
-    this->chpromopt_name = new_name;
+
+void SmallShell::changePromptName(string new_name) {
+    this->prompt_name = new_name;
+}
+
+Command::Command(const char* cmd_line) {
+    this->cmd_line = cmd_line;
+}
+
+Command::Command() {
+    this->cmd_line = " ";
+}
+
+BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
+BuiltInCommand::BuiltInCommand() : Command() {}
+
+string SmallShell::getPromptName(){
+    return this->prompt_name;
 }
