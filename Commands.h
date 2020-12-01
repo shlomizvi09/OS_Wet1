@@ -1,24 +1,24 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
-#include <string>
 #include <string.h>
+
+#include <string>
 #include <vector>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 #define HISTORY_MAX_RECORDS (50)
 
-
 class Command {
     // TODO: Add your data members
    protected:
     std::string cmd_line;
-  
+
    public:
     Command(const char* cmd_line);
     Command();
-    virtual ~Command()= default;
+    virtual ~Command() = default;
     virtual void execute() = 0;
     //virtual void prepare();
     //virtual void cleanup();
@@ -27,7 +27,7 @@ class Command {
 
 class BuiltInCommand : public Command {
    public:
-    BuiltInCommand(const char* cmd_line);
+    BuiltInCommand(const char* cmd_line): Command(cmd_line){}
     BuiltInCommand();
     virtual ~BuiltInCommand() {}
 };
@@ -57,21 +57,25 @@ class RedirectionCommand : public Command {
     //void cleanup() override;
 };
 
-class ChangeDirCommand : public BuiltInCommand { // Arik
-    // TODO: Add your data members public:
-    ChangeDirCommand(const char* cmd_line, char** plastPwd);
+class ChangeDirCommand : public BuiltInCommand {  // Arik
+                                                  // TODO: Add your data members public:
+   private:
+    char next_dir[COMMAND_ARGS_MAX_LENGTH];
+
+   public:
+    ChangeDirCommand(const char* cmd_line, char* new_dir);
     virtual ~ChangeDirCommand() {}
     void execute() override;
 };
 
-class GetCurrDirCommand : public BuiltInCommand {  //Arik
+class GetCurrDirCommand : public BuiltInCommand {  //Arik -- DONE
    public:
-    GetCurrDirCommand(const char* cmd_line);
+    GetCurrDirCommand(const char* cmd_line): BuiltInCommand(cmd_line) {}
     virtual ~GetCurrDirCommand() {}
     void execute() override;
 };
 
-class ShowPidCommand : public BuiltInCommand { //Shlomi
+class ShowPidCommand : public BuiltInCommand {  //Shlomi
    public:
     ShowPidCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
     virtual ~ShowPidCommand() {}
@@ -172,7 +176,7 @@ class ChangeChpromptCommand : public BuiltInCommand {
 };
 */
 
-class LsCommand : public BuiltInCommand { //Shlomi
+class LsCommand : public BuiltInCommand {  //Shlomi
    public:
     LsCommand(const char* cmd_line);
     virtual ~LsCommand() {}
@@ -182,11 +186,9 @@ class LsCommand : public BuiltInCommand { //Shlomi
 class SmallShell {
    private:
     // TODO: Add your data members
-    std::string curr_path;
-    std::string prev_path;
     std::string prompt_name;
-    SmallShell();
-
+    std::string old_pwd;
+    SmallShell() : prompt_name("smash"), old_pwd("") {}
    public:
     Command* CreateCommand(const char* cmd_line);
     SmallShell(SmallShell const&) = delete;      // disable copy ctor
@@ -199,9 +201,11 @@ class SmallShell {
     }
     ~SmallShell();
     void executeCommand(const char* cmd_line);
+    // TODO: add extra methods as needed
     void changePromptName(std::string new_name);
     std::string getPromptName();
-    // TODO: add extra methods as needed
+    std::string getOldPwd();
+    void changeOldPwd(std::string path);
 };
 
 #endif  //SMASH_COMMAND_H_
