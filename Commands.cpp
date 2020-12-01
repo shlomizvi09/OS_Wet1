@@ -82,7 +82,7 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h
 
-SmallShell::SmallShell() : prompt_name("smash"){}
+SmallShell::SmallShell() : prompt_name("smash") {}
 // TODO: add your implementation
 
 SmallShell::~SmallShell() {
@@ -131,20 +131,8 @@ void SmallShell::executeCommand(const char* cmd_line) {
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
-void ShowPidCommand::execute() {
-    std::cout << "smash pid is " << getpid() << endl;
-}
-
 void SmallShell::changePromptName(string new_name) {
     this->prompt_name = new_name;
-}
-
-Command::Command(const char* cmd_line) {
-    this->cmd_line = cmd_line;
-}
-
-Command::Command() {
-    this->cmd_line = " ";
 }
 
 BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
@@ -153,3 +141,11 @@ BuiltInCommand::BuiltInCommand() : Command() {}
 string SmallShell::getPromptName() {
     return this->prompt_name;
 }
+
+// ShowPidCommand //
+
+void ShowPidCommand::execute() {
+    std::cout << "smash pid is " << getpid() << endl;
+}
+
+// ###### //

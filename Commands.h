@@ -1,24 +1,24 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
-#include <string>
 #include <string.h>
+
+#include <string>
 #include <vector>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 #define HISTORY_MAX_RECORDS (50)
 
-
 class Command {
     // TODO: Add your data members
    protected:
     std::string cmd_line;
-  
+
    public:
-    Command(const char* cmd_line);
+    Command(const char* cmd_line) : cmd_line(cmd_line){};
     Command();
-    virtual ~Command()= default;
+    virtual ~Command() = default;
     virtual void execute() = 0;
     //virtual void prepare();
     //virtual void cleanup();
@@ -57,7 +57,7 @@ class RedirectionCommand : public Command {
     //void cleanup() override;
 };
 
-class ChangeDirCommand : public BuiltInCommand { // Arik
+class ChangeDirCommand : public BuiltInCommand {  // Arik
     // TODO: Add your data members public:
     ChangeDirCommand(const char* cmd_line, char** plastPwd);
     virtual ~ChangeDirCommand() {}
@@ -71,7 +71,7 @@ class GetCurrDirCommand : public BuiltInCommand {  //Arik
     void execute() override;
 };
 
-class ShowPidCommand : public BuiltInCommand { //Shlomi
+class ShowPidCommand : public BuiltInCommand {  //Shlomi
    public:
     ShowPidCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
     virtual ~ShowPidCommand() {}
@@ -172,7 +172,7 @@ class ChangeChpromptCommand : public BuiltInCommand {
 };
 */
 
-class LsCommand : public BuiltInCommand { //Shlomi
+class LsCommand : public BuiltInCommand {  //Shlomi
    public:
     LsCommand(const char* cmd_line);
     virtual ~LsCommand() {}
