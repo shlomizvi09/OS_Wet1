@@ -1,5 +1,7 @@
 #include "Commands.h"
 
+#include <dirent.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -25,8 +27,8 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 
 #define DEBUG_PRINT cerr << "DEBUG: "
 
-#define EXEC(path, arg) \
-    execvp((path), (arg));
+#define EXEC(buff, arg) \
+    execvp((buff), (arg));
 
 string _ltrim(const std::string& s) {
     size_t start = s.find_first_not_of(WHITESPACE);
@@ -82,16 +84,12 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h
 
-SmallShell::SmallShell() : prompt_name("smash") {}
-// TODO: add your implementation
+// SmallShell //
 
 SmallShell::~SmallShell() {
     // TODO: add your implementation
 }
 
-/**
-* Creates and returns a pointer to Command class which matches the given command line (cmd_line)
-*/
 Command* SmallShell::CreateCommand(const char* cmd_line) {
     char** args = new char*;
     int num_of_args = _parseCommandLine(cmd_line, args);
@@ -102,19 +100,22 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
             this->changePromptName(args[1]);
         }
         return nullptr;
+    } else if (strcmp(args[0], "pwd") == 0) {
+        return new GetCurrDirCommand(cmd_line);
+    } else if (strcmp(args[0], "cd") == 0) {
+        if (num_of_args > 2) {
+            std::cout << "smash error: cd: too many arguments" << endl;
+            return nullptr;
+        } else if (num_of_args == 1) {
+            return nullptr;
+        } else {
+            return new ChangeDirCommand(cmd_line, args[1]);
+        }
+    } else if (strcmp(args[0], "showpid") == 0) {
+        return new ShowPidCommand(cmd_line);
+    } else if (strcmp(args[0], "ls") == 0) {
+        return new LsCommand(cmd_line);
     }
-    // For example:
-    /*
-  string cmd_s = string(cmd_line);
-  if (cmd_s.find("pwd") == 0) {
-    return new GetCurrDirCommand(cmd_line);
-  }
-  else if ...
-  .....
-  else {
-    return new ExternalCommand(cmd_line);
-  }
-  */
 
     return nullptr;
 }
@@ -124,6 +125,7 @@ void SmallShell::executeCommand(const char* cmd_line) {
     if (cmd != nullptr) {
         cmd->execute();
     }
+
     // TODO: Add your implementation here
     // for example:
     // Command* cmd = CreateCommand(cmd_line);
@@ -131,21 +133,80 @@ void SmallShell::executeCommand(const char* cmd_line) {
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
+string SmallShell::getOldPwd() {
+    return old_pwd;
+}
+
+void SmallShell::changeOldPwd(string path) {
+    this->old_pwd = path;
+}
+
 void SmallShell::changePromptName(string new_name) {
     this->prompt_name = new_name;
 }
-
-BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
-BuiltInCommand::BuiltInCommand() : Command() {}
 
 string SmallShell::getPromptName() {
     return this->prompt_name;
 }
 
-// ShowPidCommand //
+// GetCurrDirCommand //
+void GetCurrDirCommand::execute() {
+    char buff[COMMAND_ARGS_MAX_LENGTH];
+    if (getcwd(buff, sizeof(buff)) != nullptr) {
+        std::cout << buff << endl;
+    }
+}
 
+// ChangeDirCommand //
+ChangeDirCommand::ChangeDirCommand(const char* cmd_line, char* new_dir) : BuiltInCommand(cmd_line) {
+    strcpy(next_dir, new_dir);
+}
+
+void ChangeDirCommand::execute() {
+    SmallShell& ss = SmallShell::getInstance();
+    char buff[COMMAND_ARGS_MAX_LENGTH];
+    if (getcwd(buff, sizeof(buff)) == nullptr) {
+        perror("smash error: getcwd failed");
+        return;
+    } else if (strcmp(this->next_dir, "-") == 0) {
+        if (ss.getOldPwd().empty()) {
+            cout << "smash error: cd: OLDPWD not set" << endl;
+            return;
+        } else {
+            chdir(ss.getOldPwd().c_str());
+            ss.changeOldPwd(string(buff));
+            return;
+        }
+    } else {
+        if (chdir(this->next_dir) == -1) {
+            perror("smash error: chdir failed");
+            return;
+        } else {
+            ss.changeOldPwd(string(buff));
+            return;
+        }
+    }
+}
+
+// ShowPidCommand //
 void ShowPidCommand::execute() {
     std::cout << "smash pid is " << getpid() << endl;
 }
 
-// ###### //
+// LsCommand //
+
+void LsCommand::execute() {
+    struct dirent** entries;
+    int res = scandir(".", &entries, NULL, alphasort);
+    if (res == -1) {
+        perror("smash error: scandir failed");
+    }
+    for (int i = 0; i < res; i++) {
+        char* curr = entries[i]->d_name;
+        if (strcmp(curr, ".") && strcmp(curr, "..")) {
+            cout << curr << endl;
+        }
+        free(entries[i]);
+    }
+    free(entries);
+}
