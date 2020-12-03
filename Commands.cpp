@@ -1,5 +1,6 @@
 #include "Commands.h"
 
+#include <dirent.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -116,6 +117,8 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
         }
     } else if (strcmp(args[0], "showpid") == 0) {
         return new ShowPidCommand(cmd_line);
+    } else if (strcmp(args[0], "ls") == 0) {
+        return new LsCommand(cmd_line);
     }
     else{
         return new ExternalCommand(cmd_line);

@@ -188,7 +188,7 @@ class ChangeChpromptCommand : public BuiltInCommand {
 
 class LsCommand : public BuiltInCommand {  //Shlomi
    public:
-    LsCommand(const char* cmd_line);
+    LsCommand(const char* cmd_line) : BuiltInCommand(cmd_line){};
     virtual ~LsCommand() {}
     void execute() override;
 };
