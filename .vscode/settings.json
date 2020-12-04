@@ -40,6 +40,9 @@
         "limits": "cpp",
         "new": "cpp",
         "stdexcept": "cpp",
-        "typeinfo": "cpp"
-    }
+        "typeinfo": "cpp",
+        "iterator": "cpp",
+        "map": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "Enabled"
 }

@@ -2,13 +2,15 @@
 #define SMASH_COMMAND_H_
 
 #include <string.h>
-
+#include <time.h>
+#include <iterator> 
 #include <string>
-#include <vector>
+#include <map>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 #define HISTORY_MAX_RECORDS (50)
+#define MAX_SIMULTANEOUS_PROSSESES (101)
 
 class Command {
     // TODO: Add your data members
@@ -16,7 +18,7 @@ class Command {
     std::string cmd_line;
 
    public:
-    Command(const char* cmd_line) : cmd_line(cmd_line){};
+    Command(const char* cmd_line) : cmd_line(cmd_line) {}
     Command();
     virtual ~Command() = default;
     virtual void execute() = 0;
@@ -34,7 +36,7 @@ class BuiltInCommand : public Command {
 
 class ExternalCommand : public Command {
    public:
-    ExternalCommand(const char* cmd_line);
+    ExternalCommand(const char* cmd_line) : Command(cmd_line){}
     virtual ~ExternalCommand() {}
     void execute() override;
 };
@@ -57,8 +59,7 @@ class RedirectionCommand : public Command {
     //void cleanup() override;
 };
 
-class ChangeDirCommand : public BuiltInCommand {  // Arik
-                                                  // TODO: Add your data members public:
+class ChangeDirCommand : public BuiltInCommand {  // Arik - DONE
    private:
     char next_dir[COMMAND_ARGS_MAX_LENGTH];
 
@@ -75,7 +76,7 @@ class GetCurrDirCommand : public BuiltInCommand {  //Arik -- DONE
     void execute() override;
 };
 
-class ShowPidCommand : public BuiltInCommand {  //Shlomi
+class ShowPidCommand : public BuiltInCommand {  //Shlomi -- DONE
    public:
     ShowPidCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
     virtual ~ShowPidCommand() {}
@@ -116,13 +117,22 @@ class HistoryCommand : public BuiltInCommand {
 class JobsList {
    public:
     class JobEntry {
-        // TODO: Add your data members
+       public:
+        int job_id;
+        pid_t pid;
+        bool is_bg_command;
+        bool is_stopped;
+        time_t create_time;
+        std::string cmd_line;
+        JobEntry(int job_id, int pid, bool is_bg_command, std::string cmd_line) : job_id(job_id), pid(pid), is_bg_command(is_bg_command), is_stopped(false), create_time(time(nullptr)), cmd_line(cmd_line) {}
+        ~JobEntry() {}
     };
-    // TODO: Add your data members
+
    public:
-    JobsList();
-    ~JobsList();
-    void addJob(Command* cmd, bool isStopped = false);
+    std::map< int, JobEntry*> jobs;
+    JobsList() : jobs(*(new std::map<int, JobEntry*>())){}
+    ~JobsList() {}
+    void addJob(std::string cmd_line, int pid);
     void printJobsList();
     void killAllJobs();
     void removeFinishedJobs();
@@ -188,9 +198,11 @@ class SmallShell {
     // TODO: Add your data members
     std::string prompt_name;
     std::string old_pwd;
-    SmallShell() : prompt_name("smash"), old_pwd("") {}
+    JobsList *job_list;
+    
 
    public:
+    SmallShell();
     Command* CreateCommand(const char* cmd_line);
     SmallShell(SmallShell const&) = delete;      // disable copy ctor
     void operator=(SmallShell const&) = delete;  // disable = operator
@@ -207,6 +219,7 @@ class SmallShell {
     std::string getPromptName();
     std::string getOldPwd();
     void changeOldPwd(std::string path);
+    JobsList* getJoblist();
 };
 
 #endif  //SMASH_COMMAND_H_

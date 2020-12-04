@@ -6,6 +6,24 @@
 #include "signals.h"
 
 int main(int argc, char* argv[]) {
+    /*      @@@@@ self testing @@@@@
+    JobsList list;
+    for (size_t j = 0; j < 50; j++)
+    {
+        list.addJob("cd",rand()%100 + 1);
+    }
+    
+    
+    for (size_t i = 0; i < MAX_SIMULTANEOUS_PROSSESES+1; i++)
+    {
+        if ((list).jobs[i]){
+            std::cout<<list.jobs.find(i)->second->pid<<std::endl;
+            std::cout<<list.jobs.find(i)->second->job_id<<std::endl;
+            std::cout<<list.jobs.find(i)->second->cmd_line<<std::endl;
+            std::cout<<std::endl;
+        }  
+    }
+    */
     if(signal(SIGTSTP , ctrlZHandler)==SIG_ERR) {
         perror("smash error: failed to set ctrl-Z handler");
     }
@@ -22,5 +40,7 @@ int main(int argc, char* argv[]) {
         std::getline(std::cin, cmd_line);
         smash.executeCommand(cmd_line.c_str());
     }
+    
+
     return 0;
 }
