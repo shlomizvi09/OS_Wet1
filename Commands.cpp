@@ -242,36 +242,26 @@ void JobsList::killAllJobs() {
 }
 
 void JobsList::removeFinishedJobs() {
-    for (auto it = jobs.cbegin(); it != jobs.cend(); ++it) {
-        if (waitpid((it->second)->pid, nullptr, WNOHANG)) {
-            auto tmp_it = it;
-            jobs.erase(tmp_it);
+    auto it = jobs.cbegin();
+    while (it != jobs.cend()) {
+        if (waitpid(it->second->pid, nullptr, WNOHANG)) {
+            auto job_to_remove = it;
+            ++it;
+            cout<< "removing: ["<<job_to_remove->second->cmd_line<<"] with pid: "<<job_to_remove->second->pid<<endl;
+            jobs.erase(job_to_remove);
+        } else {
+            ++it;
         }
     }
 }
 
 JobsList::JobEntry* JobsList::getJobById(int job_id) {
     removeFinishedJobs();
-    return (jobs.find(job_id) != jobs.cend()) ? (jobs.find(job_id))->second : nullptr;
+    JobEntry *tmp_job;
+    tmp_job = jobs.find(job_id)->second;
+    return tmp_job;
 }
 
-// LsCommand //
-
-void LsCommand::execute() {
-    struct dirent** entries;
-    int res = scandir(".", &entries, NULL, alphasort);
-    if (res == -1) {
-        perror("smash error: scandir failed");
-    }
-    for (int i = 0; i < res; i++) {
-        char* curr = entries[i]->d_name;
-        if (strcmp(curr, ".") && strcmp(curr, "..")) {
-            cout << curr << endl;
-        }
-        free(entries[i]);
-    }
-    free(entries);
-}
 // ExternalCommand //
 void ExternalCommand::execute() {
     SmallShell& sm = SmallShell::getInstance();
@@ -279,7 +269,7 @@ void ExternalCommand::execute() {
     int status;
     char curr_cmd_line[COMMAND_ARGS_MAX_LENGTH];
     strcpy(curr_cmd_line, this->cmd_line.c_str());
-    char* execv_args[] = {"/bin/bash", "-c", curr_cmd_line, NULL};
+    char* execv_args[] = {"/bin/bash", "-c", curr_cmd_line, nullptr};
     pid = fork();
     if (pid < 0) {
         perror("smash error: fork failed");
@@ -295,4 +285,11 @@ void ExternalCommand::execute() {
         }
         sm.getJoblist()->addJob(this->cmd_line, pid);
     }
+}
+
+// JobsCommand //
+void JobsCommand::execute(){
+    SmallShell &sm = SmallShell::getInstance();
+    sm.getJoblist()->removeFinishedJobs();
+    sm.getJoblist()->printJobsList();
 }
