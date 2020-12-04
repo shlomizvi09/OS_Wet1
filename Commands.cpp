@@ -116,13 +116,9 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
         }
     } else if (strcmp(args[0], "showpid") == 0) {
         return new ShowPidCommand(cmd_line);
- //   } else if (strcmp(args[0], "ls") == 0) {
-  //      return new LsCommand(cmd_line);
-    }else if (strcmp(args[0], "jobs") == 0) {
-        return new JobsCommand(cmd_line);
-    }
-
-    else {
+    } else if (strcmp(args[0], "ls") == 0) {
+        return new LsCommand(cmd_line);
+    } else {
         return new ExternalCommand(cmd_line);
     }
 
