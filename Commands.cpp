@@ -85,10 +85,9 @@ void _removeBackgroundSign(char* cmd_line) {
 // TODO: Add your implementation for classes in Commands.h
 
 // SmallShell //
-    SmallShell::SmallShell() : prompt_name("smash"), old_pwd("") {
-        this->job_list = new JobsList();
-    }
-
+SmallShell::SmallShell() : prompt_name("smash"), old_pwd("") {
+    this->job_list = new JobsList();
+}
 
 SmallShell::~SmallShell() {
     // TODO: add your implementation
@@ -117,10 +116,13 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
         }
     } else if (strcmp(args[0], "showpid") == 0) {
         return new ShowPidCommand(cmd_line);
-    } else if (strcmp(args[0], "ls") == 0) {
-        return new LsCommand(cmd_line);
+ //   } else if (strcmp(args[0], "ls") == 0) {
+  //      return new LsCommand(cmd_line);
+    }else if (strcmp(args[0], "jobs") == 0) {
+        return new JobsCommand(cmd_line);
     }
-    else{
+
+    else {
         return new ExternalCommand(cmd_line);
     }
 
@@ -244,32 +246,38 @@ void JobsList::killAllJobs() {
 }
 
 void JobsList::removeFinishedJobs() {
-    for (auto it = jobs.cbegin(); it != jobs.cend(); ++it) {
-        if (waitpid((it->second)->pid, nullptr, WNOHANG)) {
-            auto tmp_it = it;
-            jobs.erase(tmp_it);
+    auto it = jobs.cbegin();
+    while (it != jobs.cend()) {
+        if (waitpid(it->second->pid, nullptr, WNOHANG)) {
+            auto job_to_remove = it;
+            ++it;
+            cout<< "removing: ["<<job_to_remove->second->cmd_line<<"] with pid: "<<job_to_remove->second->pid<<endl;
+            jobs.erase(job_to_remove);
+        } else {
+            ++it;
         }
     }
 }
 
 JobsList::JobEntry* JobsList::getJobById(int job_id) {
     removeFinishedJobs();
-    return (jobs.find(job_id) != jobs.cend() )? (jobs.find(job_id))->second : nullptr;
+    JobEntry *tmp_job;
+    tmp_job = jobs.find(job_id)->second;
+    return tmp_job;
 }
 
-// JobsList //
+// ExternalCommand //
 void ExternalCommand::execute() {
     SmallShell& sm = SmallShell::getInstance();
     pid_t pid;
     int status;
     char curr_cmd_line[COMMAND_ARGS_MAX_LENGTH];
     strcpy(curr_cmd_line, this->cmd_line.c_str());
-    char* execv_args[] = {"/bin/bash", "-c", curr_cmd_line, NULL};
+    char* execv_args[] = {"/bin/bash", "-c", curr_cmd_line, nullptr};
     pid = fork();
     if (pid < 0) {
         perror("smash error: fork failed");
-    }
-    else if (pid == 0) {
+    } else if (pid == 0) {
         setpgrp();
         if (execv("/bin/bash", execv_args) == -1) {
             perror("smash error: execv failed");
@@ -281,4 +289,11 @@ void ExternalCommand::execute() {
         }
         sm.getJoblist()->addJob(this->cmd_line, pid);
     }
+}
+
+// JobsCommand //
+void JobsCommand::execute(){
+    SmallShell &sm = SmallShell::getInstance();
+    sm.getJoblist()->removeFinishedJobs();
+    sm.getJoblist()->printJobsList();
 }
