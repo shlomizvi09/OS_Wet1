@@ -283,10 +283,12 @@ void LsCommand::execute() {
 // ExternalCommand //
 void ExternalCommand::execute() {
     SmallShell& sm = SmallShell::getInstance();
+    bool is_bg_command = _isBackgroundComamnd(this->cmd_line.c_str());
     pid_t pid;
     int status;
     char curr_cmd_line[COMMAND_ARGS_MAX_LENGTH];
     strcpy(curr_cmd_line, this->cmd_line.c_str());
+    _removeBackgroundSign(curr_cmd_line);
     char* execv_args[] = {"/bin/bash", "-c", curr_cmd_line, nullptr};
     pid = fork();
     if (pid < 0) {
@@ -298,16 +300,17 @@ void ExternalCommand::execute() {
             exit(0);
         }
     } else {
-        if (waitpid(pid, nullptr, WUNTRACED) == -1) {
+        if (is_bg_command){
+            sm.getJoblist()->addJob(this->cmd_line, pid);
+        }
+        else if (waitpid(pid, nullptr, WUNTRACED) == -1) {
             perror("smash error: waitpid failed");
         }
-        sm.getJoblist()->addJob(this->cmd_line, pid);
     }
 }
 
 // JobsCommand //
 void JobsCommand::execute() {
     SmallShell& sm = SmallShell::getInstance();
-    sm.getJoblist()->removeFinishedJobs();
     sm.getJoblist()->printJobsList();
 }
