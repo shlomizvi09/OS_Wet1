@@ -96,6 +96,8 @@ SmallShell::~SmallShell() {
 Command* SmallShell::CreateCommand(const char* cmd_line) {
     char** args = new char*;
     int num_of_args = _parseCommandLine(cmd_line, args);
+    cout<<"the command is: "<< args[0]<<endl;
+    cout<<"num of args: "<< num_of_args<<endl;
     if (strcmp(args[0], "chprompt") == 0) {
         if (num_of_args <= 1) {
             this->changePromptName("smash> ");
@@ -118,9 +120,35 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
         return new ShowPidCommand(cmd_line);
     } else if (strcmp(args[0], "ls") == 0) {
         return new LsCommand(cmd_line);
+    } else if (strcmp(args[0], "jobs") == 0) {
+        return new JobsCommand(cmd_line);
+    } else if (strcmp(args[0], "fg") == 0) {
+        if (this->job_list->jobs.empty()) {
+            cout << "smash error: fg: jobs list is empty" << endl;
+            return nullptr;
+        }
+        else if (num_of_args == 1) {
+            int i;
+            this->job_list->getLastJob(&i);
+            return new ForegroundCommand(cmd_line, i);
+        }
+        else if (num_of_args > 2) {
+            cout << "smash error: bg: invalid arguments" << endl;
+            return nullptr;
+        } else {
+            int tmp_job_id = stoi(string(args[1]));
+            if (tmp_job_id < 1) {
+                cout << "smash error: bg: invalid arguments" << endl;
+                return nullptr;
+            } else {
+                return new ForegroundCommand(cmd_line, tmp_job_id);
+            }
+        }
     } else {
+        cout << "got ext command" << endl;
         return new ExternalCommand(cmd_line);
     }
+    delete args;
 
     return nullptr;
 }
@@ -209,7 +237,6 @@ void ShowPidCommand::execute() {
 }
 
 // JobsList //
-
 void JobsList::addJob(string cmd_line, int pid) {
     removeFinishedJobs();
     int tmp_job_id = 1;
@@ -257,13 +284,27 @@ void JobsList::removeFinishedJobs() {
 
 JobsList::JobEntry* JobsList::getJobById(int job_id) {
     removeFinishedJobs();
-    JobEntry* tmp_job;
-    tmp_job = jobs.find(job_id)->second;
-    return tmp_job;
+    auto tmp_job = jobs.find(job_id);
+    return (tmp_job->second);
 }
 
-// LsCommand //
+void JobsList::removeJobById(int jobId) {
+    auto tmp_job = jobs.find(jobId);
+    if (tmp_job != jobs.cend()) {
+        kill(tmp_job->second->pid, SIGKILL);
+        jobs.erase(tmp_job);
+    }
+}
 
+JobsList::JobEntry* JobsList::getLastJob(int* lastJobId) {
+    if (!(jobs.empty())) {
+        auto tmp_job = jobs.rbegin()->second;
+        *lastJobId = tmp_job->job_id;
+        return tmp_job;
+    }
+    return nullptr;
+}
+// LsCommand //
 void LsCommand::execute() {
     struct dirent** entries;
     int res = scandir(".", &entries, NULL, alphasort);
@@ -300,10 +341,9 @@ void ExternalCommand::execute() {
             exit(0);
         }
     } else {
-        if (is_bg_command){
+        if (is_bg_command) {
             sm.getJoblist()->addJob(this->cmd_line, pid);
-        }
-        else if (waitpid(pid, nullptr, WUNTRACED) == -1) {
+        } else if (waitpid(pid, nullptr, WUNTRACED) == -1) {
             perror("smash error: waitpid failed");
         }
     }
@@ -313,4 +353,25 @@ void ExternalCommand::execute() {
 void JobsCommand::execute() {
     SmallShell& sm = SmallShell::getInstance();
     sm.getJoblist()->printJobsList();
+}
+
+// ForegroundCommand //
+
+void ForegroundCommand::execute() {
+    SmallShell& sm = SmallShell::getInstance();
+
+    JobsList::JobEntry* tmp_job = sm.getJoblist()->getJobById(this->job_id);
+    if (!tmp_job) {
+        cout << "smash error: fg job-id " << this->job_id << " does not exist" << endl;
+    } else {
+        if (kill(tmp_job->pid, SIGCONT) == -1) {
+            perror("smash error: kill failed");
+        } else {
+            cout << tmp_job->cmd_line << " : " << tmp_job->pid << endl;
+            if (waitpid(tmp_job->pid, nullptr, WUNTRACED) == -1) {
+                perror("smash error: waitpid failed");
+            }
+            sm.getJoblist()->removeJobById(this->job_id);
+        }
+    }
 }
