@@ -300,17 +300,38 @@ void ExternalCommand::execute() {
             exit(0);
         }
     } else {
-        if (is_bg_command){
+        if (is_bg_command) {
             sm.getJoblist()->addJob(this->cmd_line, pid);
-        }
-        else if (waitpid(pid, nullptr, WUNTRACED) == -1) {
+        } else if (waitpid(pid, nullptr, WUNTRACED) == -1) {
             perror("smash error: waitpid failed");
         }
     }
 }
 
 // JobsCommand //
+
 void JobsCommand::execute() {
     SmallShell& sm = SmallShell::getInstance();
     sm.getJoblist()->printJobsList();
+}
+
+// KillCommand //
+
+void KillCommand::execute() {
+    int job_id;
+    int signal_num;
+    char** args = new char*;
+    int num_of_args = _parseCommandLine(this->cmd_line.c_str(), args);
+    if (num_of_args != 3) {
+        cout << "smash error : kill : invalid arguments " << endl;
+        return;
+    }
+    try {
+        signal_num = (int)args[1];
+        job_id = (int)args[2];
+    } catch (invalid_argument) {
+        cout << "smash error: kill: invalid arguments" << endl;
+        delete args;
+        return;
+    }
 }

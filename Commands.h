@@ -3,9 +3,10 @@
 
 #include <string.h>
 #include <time.h>
-#include <iterator> 
-#include <string>
+
+#include <iterator>
 #include <map>
+#include <string>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -36,7 +37,7 @@ class BuiltInCommand : public Command {
 
 class ExternalCommand : public Command {
    public:
-    ExternalCommand(const char* cmd_line) : Command(cmd_line){}
+    ExternalCommand(const char* cmd_line) : Command(cmd_line) {}
     virtual ~ExternalCommand() {}
     void execute() override;
 };
@@ -129,8 +130,8 @@ class JobsList {
     };
 
    public:
-    std::map< int, JobEntry*> jobs;
-    JobsList() : jobs(*(new std::map<int, JobEntry*>())){}
+    std::map<int, JobEntry*> jobs;
+    JobsList() : jobs(*(new std::map<int, JobEntry*>())) {}
     ~JobsList() {}
     void addJob(std::string cmd_line, int pid);
     void printJobsList();
@@ -146,15 +147,17 @@ class JobsList {
 class JobsCommand : public BuiltInCommand {
     // TODO: Add your data members
    public:
-    JobsCommand(const char* cmd_line) : BuiltInCommand(cmd_line){}
+    JobsCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
     virtual ~JobsCommand() {}
     void execute() override;
 };
 
 class KillCommand : public BuiltInCommand {
     // TODO: Add your data members
+    JobsList* jobs;
+
    public:
-    KillCommand(const char* cmd_line, JobsList* jobs);
+    KillCommand(const char* cmd_line, JobsList* jobs) : BuiltInCommand(cmd_line), jobs(jobs) {}
     virtual ~KillCommand() {}
     void execute() override;
 };
@@ -198,8 +201,7 @@ class SmallShell {
     // TODO: Add your data members
     std::string prompt_name;
     std::string old_pwd;
-    JobsList *job_list;
-    
+    JobsList* job_list;
 
    public:
     SmallShell();
