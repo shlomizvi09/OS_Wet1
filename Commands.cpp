@@ -247,7 +247,7 @@ void JobsList::removeFinishedJobs() {
         if (waitpid(it->second->pid, nullptr, WNOHANG)) {
             auto job_to_remove = it;
             ++it;
-            cout<< "removing: ["<<job_to_remove->second->cmd_line<<"] with pid: "<<job_to_remove->second->pid<<endl;
+            cout << "removing: [" << job_to_remove->second->cmd_line << "] with pid: " << job_to_remove->second->pid << endl;
             jobs.erase(job_to_remove);
         } else {
             ++it;
@@ -257,9 +257,27 @@ void JobsList::removeFinishedJobs() {
 
 JobsList::JobEntry* JobsList::getJobById(int job_id) {
     removeFinishedJobs();
-    JobEntry *tmp_job;
+    JobEntry* tmp_job;
     tmp_job = jobs.find(job_id)->second;
     return tmp_job;
+}
+
+// LsCommand //
+
+void LsCommand::execute() {
+    struct dirent** entries;
+    int res = scandir(".", &entries, NULL, alphasort);
+    if (res == -1) {
+        perror("smash error: scandir failed");
+    }
+    for (int i = 0; i < res; i++) {
+        char* curr = entries[i]->d_name;
+        if (strcmp(curr, ".") && strcmp(curr, "..")) {
+            cout << curr << endl;
+        }
+        free(entries[i]);
+    }
+    free(entries);
 }
 
 // ExternalCommand //
@@ -288,8 +306,8 @@ void ExternalCommand::execute() {
 }
 
 // JobsCommand //
-void JobsCommand::execute(){
-    SmallShell &sm = SmallShell::getInstance();
+void JobsCommand::execute() {
+    SmallShell& sm = SmallShell::getInstance();
     sm.getJoblist()->removeFinishedJobs();
     sm.getJoblist()->printJobsList();
 }
