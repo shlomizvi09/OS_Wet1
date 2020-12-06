@@ -13,6 +13,8 @@
 #define HISTORY_MAX_RECORDS (50)
 #define MAX_SIMULTANEOUS_PROSSESES (101)
 
+class JobsList;
+
 class Command {
     // TODO: Add your data members
    protected:
@@ -84,8 +86,6 @@ class ShowPidCommand : public BuiltInCommand {  //Shlomi -- DONE
     void execute() override;
 };
 
-class JobsList;
-
 class QuitCommand : public BuiltInCommand {
     // TODO: Add your data members public:
     QuitCommand(const char* cmd_line, JobsList* jobs);
@@ -125,7 +125,7 @@ class JobsList {
         bool is_stopped;
         time_t create_time;
         std::string cmd_line;
-        JobEntry(int job_id, int pid, bool is_bg_command, std::string cmd_line) : job_id(job_id), pid(pid), is_bg_command(is_bg_command), is_stopped(false), create_time(time(nullptr)), cmd_line(cmd_line) {}
+        JobEntry(int job_id, int pid, bool is_bg_command,bool is_stopped, std::string cmd_line) : job_id(job_id), pid(pid), is_bg_command(is_bg_command), is_stopped(is_stopped), create_time(time(nullptr)), cmd_line(cmd_line) {}
         ~JobEntry() {}
     };
 
@@ -133,7 +133,7 @@ class JobsList {
     std::map<int, JobEntry*> jobs;
     JobsList() : jobs(*(new std::map<int, JobEntry*>())) {}
     ~JobsList() {}
-    void addJob(std::string cmd_line, int pid);
+    void addJob(std::string cmd_line, int pid,bool is_stopped);
     void printJobsList();
     void killAllJobs();
     void removeFinishedJobs();
@@ -172,9 +172,9 @@ class ForegroundCommand : public BuiltInCommand {
 };
 
 class BackgroundCommand : public BuiltInCommand {
-    // TODO: Add your data members
+    int job_id;
    public:
-    BackgroundCommand(const char* cmd_line, JobsList* jobs);
+    BackgroundCommand(const char* cmd_line, int job_id) : BuiltInCommand(cmd_line), job_id(job_id) {}
     virtual ~BackgroundCommand() {}
     void execute() override;
 };
@@ -203,6 +203,8 @@ class SmallShell {
     std::string prompt_name;
     std::string old_pwd;
     JobsList* job_list;
+    std::string curr_fg_command;
+    pid_t curr_fg_pid;
 
    public:
     SmallShell();
@@ -223,6 +225,10 @@ class SmallShell {
     std::string getOldPwd();
     void changeOldPwd(std::string path);
     JobsList* getJoblist();
+    void setFgPid (int pid);
+    int getFgPid();
+    void setFgCommand(std::string cmd_line);
+    std::string getFgCommand();
 };
 
 #endif  //SMASH_COMMAND_H_
