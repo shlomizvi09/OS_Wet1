@@ -97,6 +97,9 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
     if (!cmd_line) {
         return nullptr;
     }
+    string cmd_string = cmd_line;
+    int pipe_idx = cmd_string.find("|");
+    
     char** args = new char*;
     int num_of_args = _parseCommandLine(cmd_line, args);
     if (num_of_args == 0) {
@@ -105,11 +108,16 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
     }
     // cout << "the command is: " << args[0] << endl;
     // cout << "num of args: " << num_of_args << endl;
+    if (pipe_idx != cmd_string.npos){
+        delete args;
+        return new PipeCommand(cmd_line);
+    }
     if (strcmp(args[0], "chprompt") == 0) {
         if (num_of_args <= 1) {
             this->changePromptName("smash> ");
         } else {
             this->changePromptName(args[1]);
+            delete args;
         }
         return nullptr;
     }
@@ -561,6 +569,109 @@ void BackgroundCommand::execute() {
         } else {
             tmp_job->is_stopped = false;
             cout << tmp_job->cmd_line << " : " << tmp_job->pid << endl;
+        }
+    }
+}
+
+// PipeCommand //
+PipeCommand::PipeCommand(const char* cmd_line) {
+    string full_cmd = string(cmd_line);
+    auto pipe_sign_idx = full_cmd.find("|");
+    this->left_cmd = full_cmd.substr(0, pipe_sign_idx);
+    if (full_cmd.substr(pipe_sign_idx + 1, 1) == "&") {
+        this->right_cmd = full_cmd.substr(pipe_sign_idx + 2);
+        this->pipe_type = 1;
+    } else {
+        this->right_cmd = full_cmd.substr(pipe_sign_idx + 1);
+        this->pipe_type = 0;
+    }
+    cout << "cmd1: " << left_cmd << " cmd2: " << right_cmd << ", type: " << pipe_type << endl;
+}
+
+void PipeCommand::execute() {
+    SmallShell& sm = SmallShell::getInstance();
+    bool is_bg_command = _isBackgroundComamnd(this->left_cmd.c_str());
+    pid_t top_pid = fork();
+    if (top_pid < 0) {
+        perror("smash error: fork failed");
+        return;
+    }
+    if (top_pid == 0) {  //main child
+        setpgrp();
+        int tmp_pipe[2];
+        if (pipe(tmp_pipe) < 0) {
+            perror("smash error: pipe failed");
+            return;
+        }
+        pid_t left_cmd_pid = fork();
+        if (left_cmd_pid < 0) {
+            perror("smash error: fork failed");
+            return;
+        }
+        if (left_cmd_pid == 0) {  //left command process
+            setpgrp();
+            if (this->pipe_type == 0) {
+                if (dup2(tmp_pipe[1], STDOUT_FILENO) < 0) {
+                    perror("smash error: dup failed");
+                    return;
+                }
+            } else {
+                if (dup2(tmp_pipe[1], STDERR_FILENO) < 0) {
+                    perror("smash error: dup failed");
+                    return;
+                }
+            }
+            if (close(tmp_pipe[0]) < 0 || close(tmp_pipe[1]) < 0) {
+                perror("smash error: close failed");
+                return;
+            }
+            sm.executeCommand(this->left_cmd.c_str());
+            exit(0);
+        }
+        pid_t right_cmd_pid = fork();
+        if (right_cmd_pid < 0) {
+            perror("smash error: fork failed");
+            return;
+        }
+        if (right_cmd_pid == 0) { //right command process
+            setpgrp();
+            if (dup2(tmp_pipe[0], STDIN_FILENO) < 0) {
+                perror("smash error: dup failed");
+                return;
+            }
+            if (close(tmp_pipe[0] < 0) || close(tmp_pipe[1]) < 0) {
+                perror("smash error: close failed");
+                return;
+            }
+            sm.executeCommand(this->right_cmd.c_str());
+            exit(0);
+        }
+        if (close(tmp_pipe[0]) < 0 || close(tmp_pipe[1]) < 0) {
+            perror("smash error: close failed");
+            return;
+        }
+        if (waitpid(left_cmd_pid, nullptr, WUNTRACED) == -1) {
+            perror("smash error: waitpid failed");
+            return;
+        }
+        if (waitpid(right_cmd_pid, nullptr, WUNTRACED) == -1) {
+            perror("smash error: waitpid failed");
+            return;
+        }
+        exit(0);
+    }
+    if (top_pid > 0) {
+        if (is_bg_command) {
+            sm.getJoblist()->addJob(cmd_line, top_pid, false);
+        } else {
+            sm.setFgCommand(cmd_line);
+            sm.setFgPid(top_pid);
+            if (waitpid(top_pid, nullptr, WUNTRACED) == -1) {
+                perror("smash error: waitpid failed");
+                return;
+            }
+            sm.setFgCommand("");
+            sm.setFgPid(-1);
         }
     }
 }
