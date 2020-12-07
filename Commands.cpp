@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -87,6 +88,7 @@ void _removeBackgroundSign(char* cmd_line) {
 // SmallShell //
 SmallShell::SmallShell() : prompt_name("smash"), old_pwd(""), curr_fg_command(""), curr_fg_pid(-1) {
     this->job_list = new JobsList();
+    this->list_of_alarms = new ListOfAlarms();
 }
 
 SmallShell::~SmallShell() {
@@ -99,7 +101,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
     }
     string cmd_string = cmd_line;
     int pipe_idx = cmd_string.find("|");
-    
+
     char** args = new char*;
     int num_of_args = _parseCommandLine(cmd_line, args);
     if (num_of_args == 0) {
@@ -108,7 +110,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
     }
     // cout << "the command is: " << args[0] << endl;
     // cout << "num of args: " << num_of_args << endl;
-    if (pipe_idx != cmd_string.npos){
+    if (pipe_idx != cmd_string.npos) {
         delete args;
         return new PipeCommand(cmd_line);
     }
@@ -298,18 +300,18 @@ ChangeDirCommand::ChangeDirCommand(const char* cmd_line, char* new_dir) : BuiltI
 }
 
 void ChangeDirCommand::execute() {
-    SmallShell& ss = SmallShell::getInstance();
+    SmallShell& sm = SmallShell::getInstance();
     char buff[COMMAND_ARGS_MAX_LENGTH];
     if (getcwd(buff, sizeof(buff)) == nullptr) {
         perror("smash error: getcwd failed");
         return;
     } else if (strcmp(this->next_dir, "-") == 0) {
-        if (ss.getOldPwd().empty()) {
+        if (sm.getOldPwd().empty()) {
             cout << "smash error: cd: OLDPWD not set" << endl;
             return;
         } else {
-            chdir(ss.getOldPwd().c_str());
-            ss.changeOldPwd(string(buff));
+            chdir(sm.getOldPwd().c_str());
+            sm.changeOldPwd(string(buff));
             return;
         }
     } else {
@@ -317,7 +319,7 @@ void ChangeDirCommand::execute() {
             perror("smash error: chdir failed");
             return;
         } else {
-            ss.changeOldPwd(string(buff));
+            sm.changeOldPwd(string(buff));
             return;
         }
     }
@@ -476,16 +478,6 @@ void JobsCommand::execute() {
 
 // KillCommand //
 
-int c_to_int(char* num) {  // aux function
-    if (num == nullptr) {
-        std::cout << "ERROR CONVERTING. NULL_ARG" << endl;
-        return 0;
-    }
-    int res;
-    sscanf(num, "%d", &res);
-    return res;
-}
-
 void KillCommand::execute() {
     int job_id;
     int signal_num;
@@ -633,7 +625,7 @@ void PipeCommand::execute() {
             perror("smash error: fork failed");
             return;
         }
-        if (right_cmd_pid == 0) { //right command process
+        if (right_cmd_pid == 0) {  //right command process
             setpgrp();
             if (dup2(tmp_pipe[0], STDIN_FILENO) < 0) {
                 perror("smash error: dup failed");
@@ -674,4 +666,92 @@ void PipeCommand::execute() {
             sm.setFgPid(-1);
         }
     }
+}
+
+// TimeoutCommand //
+
+Alarm::Alarm(time_t creation_time, int duration) {
+    this->creation_time = creation_time;
+    this->duration = duration;
+    this->when_to_fire = time(nullptr) + duration;
+}
+
+void ListOfAlarms::addAlarm(time_t time_created, int duration) {
+    Alarm* new_alarm = new Alarm(time_created, duration);
+    this->list_of_alarms->push_back(new_alarm);
+    sort(this->list_of_alarms->begin(), this->list_of_alarms->end(), compareAlarms);
+    cout << "smash: got an alarm" << endl;
+    fireAlarm();
+}
+
+void ListOfAlarms::fireAlarm() {
+    Alarm* curr_alarm = this->list_of_alarms->at(0);
+    int duration = curr_alarm->when_to_fire - time(nullptr);
+    int res = alarm(duration);
+    if (res == -1) {
+        perror("smash error: alarm failed");
+        return;
+    }
+    // TODO : add printing for timed out
+}
+
+void TimeoutCommand::execute() {
+    SmallShell& sm = SmallShell::getInstance();
+    char** args = new char*;
+    int num_of_args = _parseCommandLine(this->cmd_line.c_str(), args);
+    if (num_of_args <= 2) {
+        cout << "smash error: timeout: invalid arguments" << endl;
+
+        delete args;
+        return;
+    }
+    int time_out = c_to_int(args[1]);
+    if (time_out < 0) {
+        cout << "smash error: timeout: invalid arguments" << endl;
+        delete args;
+        return;
+    }
+    string temp_str = "";
+    for (int i = 2; i < 5; i++) {
+        temp_str = temp_str + args[i] + " ";
+    }
+    const char* new_cmd_line = temp_str.c_str();
+    Command* cmd = sm.CreateCommand(new_cmd_line);
+    if (isBuiltIn(args)) {
+        sm.list_of_alarms->addAlarm(time(nullptr), c_to_int(args[1]));
+    }
+    cmd->execute();
+    delete args;
+}
+// TODO : need to wrtie a function that frees the args array.
+
+// Auxiliary Functions //
+
+int c_to_int(char* num) {
+    if (num == nullptr) {
+        std::cout << "ERROR CONVERTING. NULL_ARG" << endl;
+        return 0;
+    }
+    int res;
+    sscanf(num, "%d", &res);
+    return res;
+}
+
+bool isBuiltIn(char** args) {
+    string builtins[] = {"chprompt", "ls", "showpid", "pwd", "cd", "jobs", "kill", "fg", "bg", "quit"};
+    string command_name = args[2];
+    for (int i = 0; i < 10; i++) {
+        if (builtins[i] == command_name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool compareAlarms(Alarm* alarm_1, Alarm* alarm_2) {
+    return alarm_1->when_to_fire < alarm_2->when_to_fire;
+}
+
+void isTimeout(char** args) {
+    //TODO shlomi
 }

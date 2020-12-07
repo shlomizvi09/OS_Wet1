@@ -7,6 +7,7 @@
 #include <iterator>
 #include <map>
 #include <string>
+#include <vector>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -45,11 +46,10 @@ class ExternalCommand : public Command {
 };
 
 class PipeCommand : public Command {
-
    public:
-   std::string left_cmd;
-   std::string right_cmd;
-   int pipe_type; // 0->stdout , 1->stderr
+    std::string left_cmd;
+    std::string right_cmd;
+    int pipe_type;  // 0->stdout , 1->stderr
     PipeCommand(const char* cmd_line);
     virtual ~PipeCommand() {}
     void execute() override;
@@ -128,7 +128,7 @@ class JobsList {
         bool is_stopped;
         time_t create_time;
         std::string cmd_line;
-        JobEntry(int job_id, int pid, bool is_bg_command,bool is_stopped, std::string cmd_line) : job_id(job_id), pid(pid), is_bg_command(is_bg_command), is_stopped(is_stopped), create_time(time(nullptr)), cmd_line(cmd_line) {}
+        JobEntry(int job_id, int pid, bool is_bg_command, bool is_stopped, std::string cmd_line) : job_id(job_id), pid(pid), is_bg_command(is_bg_command), is_stopped(is_stopped), create_time(time(nullptr)), cmd_line(cmd_line) {}
         ~JobEntry() {}
     };
 
@@ -136,7 +136,7 @@ class JobsList {
     std::map<int, JobEntry*> jobs;
     JobsList() : jobs(*(new std::map<int, JobEntry*>())) {}
     ~JobsList() {}
-    void addJob(std::string cmd_line, int pid,bool is_stopped);
+    void addJob(std::string cmd_line, int pid, bool is_stopped);
     void printJobsList();
     void killAllJobs();
     void removeFinishedJobs();
@@ -167,15 +167,16 @@ class KillCommand : public BuiltInCommand {
 
 class ForegroundCommand : public BuiltInCommand {
     int job_id;
+
    public:
-   
-    ForegroundCommand(const char* cmd_line, int job_id) : BuiltInCommand(cmd_line), job_id(job_id){}
+    ForegroundCommand(const char* cmd_line, int job_id) : BuiltInCommand(cmd_line), job_id(job_id) {}
     virtual ~ForegroundCommand() {}
     void execute() override;
 };
 
 class BackgroundCommand : public BuiltInCommand {
     int job_id;
+
    public:
     BackgroundCommand(const char* cmd_line, int job_id) : BuiltInCommand(cmd_line), job_id(job_id) {}
     virtual ~BackgroundCommand() {}
@@ -200,16 +201,65 @@ class LsCommand : public BuiltInCommand {  //Shlomi
     void execute() override;
 };
 
+class Alarm {
+   public:
+    Alarm(time_t creation_time, int duration);
+    ~Alarm();
+    time_t creation_time;
+    int duration;
+    int when_to_fire;
+    bool operator==(Alarm& alarm) {
+        if (this->creation_time == alarm.creation_time && this->duration == alarm.duration)
+            return true;
+        return false;
+    }
+    bool operator<(Alarm& alarm) {
+        return this->when_to_fire < alarm.when_to_fire;
+    }
+    bool operator!=(Alarm& alarm) {
+        if (*this == alarm)
+            return false;
+        else
+            return true;
+    }
+    void operator=(Alarm* alarm) {
+        this->duration = alarm->duration;
+        this->creation_time = alarm->creation_time;
+    }
+};
+
+class ListOfAlarms {  // we need to hanle multiple commands with a timeout, in a row
+   public:
+    std::vector<Alarm*>* list_of_alarms;
+    std::string cmd_line;
+    ListOfAlarms() {
+        list_of_alarms = new std::vector<Alarm*>();
+    };
+    ~ListOfAlarms() {
+        this->list_of_alarms->clear();
+        delete this->list_of_alarms;
+    };
+    void fireAlarm();
+    void addAlarm(time_t time_created, int duration);
+};
+
+class TimeoutCommand : public Command {
+   public:
+    TimeoutCommand(const char* cmd_line) : Command(cmd_line){};
+    virtual ~TimeoutCommand() {}
+    void execute() override;
+};
+
 class SmallShell {
-   private:
+   public:
     // TODO: Add your data members
     std::string prompt_name;
     std::string old_pwd;
     JobsList* job_list;
     std::string curr_fg_command;
     pid_t curr_fg_pid;
+    ListOfAlarms* list_of_alarms;
 
-   public:
     SmallShell();
     Command* CreateCommand(const char* cmd_line);
     SmallShell(SmallShell const&) = delete;      // disable copy ctor
@@ -228,10 +278,17 @@ class SmallShell {
     std::string getOldPwd();
     void changeOldPwd(std::string path);
     JobsList* getJoblist();
-    void setFgPid (int pid);
+    void setFgPid(int pid);
     int getFgPid();
     void setFgCommand(std::string cmd_line);
     std::string getFgCommand();
 };
+
+// Auxiliary Functions //
+
+int c_to_int(char* num);
+bool isBuiltIn(char** args);
+bool compareAlarms(Alarm* alarm_1, Alarm* alarm_2);
+void isTimeout(std::string args);
 
 #endif  //SMASH_COMMAND_H_
