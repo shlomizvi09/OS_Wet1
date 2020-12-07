@@ -1,12 +1,12 @@
 #include "Commands.h"
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -87,7 +87,7 @@ void _removeBackgroundSign(char* cmd_line) {
 // TODO: Add your implementation for classes in Commands.h
 
 // SmallShell //
-SmallShell::SmallShell() : prompt_name("smash"), old_pwd(""), curr_fg_command(""), curr_fg_pid(-1) , forked(false){
+SmallShell::SmallShell() : prompt_name("smash"), old_pwd(""), curr_fg_command(""), curr_fg_pid(-1), forked(false) {
     this->job_list = new JobsList();
 }
 
@@ -108,16 +108,16 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
         if (arg != "")
             args.push_back(arg);
     }
-    if (args.empty()){
+    if (args.empty()) {
         return nullptr;
     }
     int num_of_args = args.size();
     int pipe_idx = cmd_string.find("|");
     int redir_idx = cmd_string.find(">");
-    if (pipe_idx != cmd_string.npos){
+    if (pipe_idx != cmd_string.npos) {
         return new PipeCommand(cmd_line);
     }
-    if (redir_idx != cmd_string.npos){
+    if (redir_idx != cmd_string.npos) {
         return new RedirectionCommand(cmd_line);
     }
     if (strcmp(args[0].c_str(), "chprompt") == 0) {
@@ -433,7 +433,7 @@ void ExternalCommand::execute() {
     if (pid < 0) {
         perror("smash error: fork failed");
     } else if (pid == 0) {
-        if (!sm.forked){
+        if (!sm.forked) {
             setpgrp();
         }
         if (execv("/bin/bash", execv_args) == -1) {
@@ -622,7 +622,7 @@ void PipeCommand::execute() {
             perror("smash error: fork failed");
             return;
         }
-        if (right_cmd_pid == 0) { //right command process
+        if (right_cmd_pid == 0) {  //right command process
             setpgrp();
             if (dup2(tmp_pipe[0], STDIN_FILENO) < 0) {
                 perror("smash error: dup failed");
@@ -667,69 +667,50 @@ void PipeCommand::execute() {
 }
 
 // RedirectionCommand //
-RedirectionCommand::RedirectionCommand(const char* cmd_line){
+RedirectionCommand::RedirectionCommand(const char* cmd_line) {
     string full_cmd = string(cmd_line);
+    full_cmd = _trim(full_cmd);
     auto redir_sign_idx = full_cmd.find(">");
-    this->cmd = full_cmd.substr(0, redir_sign_idx);
+    this->cmd = _trim(full_cmd.substr(0, redir_sign_idx));
     if (full_cmd.substr(redir_sign_idx + 1, 1) == ">") {
-        this->dest = full_cmd.substr(redir_sign_idx + 2);
+        this->dest = _trim(full_cmd.substr(redir_sign_idx + 2));
         this->redirection_type = 1;
     } else {
-        this->dest = full_cmd.substr(redir_sign_idx + 1);
+        this->dest = _trim(full_cmd.substr(redir_sign_idx + 1));
         this->redirection_type = 0;
+    }
+    is_bg_command = (_isBackgroundComamnd(full_cmd.c_str()) || _isBackgroundComamnd(cmd.c_str()));
+    if (dest.substr(dest.size() - 1, 1) == "&") {
+        dest.erase(dest.size() - 1);
     }
     cout << "cmd1: " << cmd << " cmd2: " << dest << ", type: " << redirection_type << endl;
 }
 
-void RedirectionCommand::execute(){
+void RedirectionCommand::execute() {
     SmallShell& sm = SmallShell::getInstance();
-    bool is_bg_command = _isBackgroundComamnd(cmd_line.c_str());
     int fd, old_stdout;
     old_stdout = dup(1);
-    if (close(1) < 0){
+    if (close(1) < 0) {
         perror("smash error: close failed");
         return;
     }
-    if (!redirection_type){
-        fd = open(dest.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0777);
+    if (!redirection_type) {
+        fd = open(dest.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0666);
+    } else {
+        fd = open(dest.c_str(), O_APPEND | O_WRONLY | O_CREAT, 0666);
     }
-    else{
-        fd = open(dest.c_str(), O_APPEND | O_WRONLY | O_CREAT, 0777);
-    }
-    if (fd < 0){
+    if (fd < 0) {
         perror("smash error: open failed");
         return;
     }
-    pid_t pid = fork();
-    if (pid < 0){
-        perror("smash error: fork failed");
-        return;
-    }
-    if (pid == 0){
-        if (!sm.forked){
-            setpgrp();
-        }
-        sm.forked = true;
-        sm.executeCommand(cmd.c_str());
-        sm.forked = false;
-        exit(1);
-    }
-    else{
-        if (is_bg_command) {
-            sm.getJoblist()->addJob(cmd.c_str(),pid,false);
-        }
-        else{
-            sm.setFgCommand(cmd);
-            sm.setFgPid(pid);
-            if (waitpid(pid, nullptr,WUNTRACED) == -1){
-                perror("smash error: waitpid failed");
-            }
-            sm.setFgCommand("");
-            sm.setFgPid(-1);
+
+    if (is_bg_command) {
+        if (!_isBackgroundComamnd(cmd.c_str())) {
+            cmd.append(" &");
         }
     }
+    sm.executeCommand(this->cmd.c_str());
     close(1);
-    dup2(old_stdout,1);
+    dup2(old_stdout, 1);
     close(old_stdout);
 }
-
