@@ -56,7 +56,9 @@ class PipeCommand : public Command {
 };
 
 class RedirectionCommand : public Command {
-    // TODO: Add your data members
+    std::string cmd;
+    std::string dest;
+    bool redirection_type; //0 == >  , 1==>>
    public:
     explicit RedirectionCommand(const char* cmd_line);
     virtual ~RedirectionCommand() {}
@@ -210,6 +212,7 @@ class SmallShell {
     pid_t curr_fg_pid;
 
    public:
+    bool forked;
     SmallShell();
     Command* CreateCommand(const char* cmd_line);
     SmallShell(SmallShell const&) = delete;      // disable copy ctor
