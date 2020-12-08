@@ -716,28 +716,32 @@ void PipeCommand::execute() {
 // RedirectionCommand //
 RedirectionCommand::RedirectionCommand(const char* cmd_line) {
     string full_cmd = string(cmd_line);
+    full_cmd = _trim(full_cmd);
     auto redir_sign_idx = full_cmd.find(">");
-    this->cmd = full_cmd.substr(0, redir_sign_idx);
+    this->cmd = _trim(full_cmd.substr(0, redir_sign_idx));
     if (full_cmd.substr(redir_sign_idx + 1, 1) == ">") {
-        this->dest = full_cmd.substr(redir_sign_idx + 2);
+        this->dest = _trim(full_cmd.substr(redir_sign_idx + 2));
         this->redirection_type = 1;
     } else {
-        this->dest = full_cmd.substr(redir_sign_idx + 1);
+        this->dest = _trim(full_cmd.substr(redir_sign_idx + 1));
         this->redirection_type = 0;
     }
-    cout << "cmd1: " << cmd << " cmd2: " << dest << ", type: " << redirection_type << endl;
+    is_bg_command = (_isBackgroundComamnd(full_cmd.c_str()) || _isBackgroundComamnd(cmd.c_str()));
+    if (dest.substr(dest.size() - 1, 1) == "&") {
+        dest.erase(dest.size() - 1);
+    }
+    cout << "cmd1: " << cmd << " cmd2: " << dest << ", type: " << this->redirection_type << endl;
 }
 
 void RedirectionCommand::execute() {
     SmallShell& sm = SmallShell::getInstance();
-    bool is_bg_command = _isBackgroundComamnd(cmd_line.c_str());
     int fd, old_stdout;
     old_stdout = dup(1);
     if (close(1) < 0) {
         perror("smash error: close failed");
         return;
     }
-    if (!redirection_type) {
+    if (!this->redirection_type) {
         fd = open(dest.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0777);
     } else {
         fd = open(dest.c_str(), O_APPEND | O_WRONLY | O_CREAT, 0777);

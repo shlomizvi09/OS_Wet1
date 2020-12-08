@@ -61,6 +61,8 @@ class RedirectionCommand : public Command {
     std::string cmd;
     std::string dest;
     bool redirection_type;  //0 == >  , 1==>>
+    bool is_bg_command;
+
    public:
     explicit RedirectionCommand(const char* cmd_line);
     virtual ~RedirectionCommand() {}
