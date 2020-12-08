@@ -1,11 +1,13 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 
 #include <iterator>
 #include <map>
+#include <stack>
 #include <string>
 #include <vector>
 
@@ -56,7 +58,9 @@ class PipeCommand : public Command {
 };
 
 class RedirectionCommand : public Command {
-    // TODO: Add your data members
+    std::string cmd;
+    std::string dest;
+    bool redirection_type;  //0 == >  , 1==>>
    public:
     explicit RedirectionCommand(const char* cmd_line);
     virtual ~RedirectionCommand() {}
@@ -250,6 +254,55 @@ class TimeoutCommand : public Command {
     void execute() override;
 };
 
+class TimedoutList {
+   public:
+    class TimedoutEntry {
+       public:
+        time_t timestamp;
+        int duration;
+        std::string command;
+        pid_t process_id;
+        bool operator==(TimedoutEntry& timed) {
+            if (this->timestamp = timed.timestamp && this->duration == timed.duration && this->command == timed.command &&
+                                  this->process_id == timed.process_id)
+                return true;
+            return false;
+        }
+        bool operator!=(TimedoutEntry& timed) {
+            if (*this == timed)
+                return false;
+            else
+                return true;
+        }
+        void operator=(TimedoutEntry* timed) {
+            this->duration = timed->duration;
+            this->command = timed->command;
+            this->timestamp = timed->timestamp;
+            this->process_id = timed->process_id;
+        }
+    };
+    std::map<int, TimedoutEntry*>* timed_dict;
+    TimedoutList() {
+        timed_dict = new std::map<int, TimedoutEntry*>();
+    }
+    ~TimedoutList() {
+        this->timed_dict->clear();
+        delete this->timed_dict;
+    }
+    void addTimedout(std::string cmd, pid_t processId, time_t timestap, int duration) {
+        TimedoutEntry* new_entry = new TimedoutEntry();
+        new_entry->command = cmd;
+        new_entry->timestamp = time(nullptr);
+        new_entry->process_id = processId;
+        new_entry->duration = duration;
+        std::pair<int, TimedoutEntry*> _pair = std::make_pair(processId, new_entry);
+        this->timed_dict->insert(_pair);
+    }
+    void removeTimedout(pid_t processId) {
+        this->timed_dict->erase(processId);
+    }
+};
+
 class SmallShell {
    public:
     // TODO: Add your data members
@@ -259,7 +312,11 @@ class SmallShell {
     std::string curr_fg_command;
     pid_t curr_fg_pid;
     ListOfAlarms* list_of_alarms;
+    TimedoutList* timed_out_list;
 
+   public:
+    bool forked;
+    bool timeout;
     SmallShell();
     Command* CreateCommand(const char* cmd_line);
     SmallShell(SmallShell const&) = delete;      // disable copy ctor
@@ -286,9 +343,9 @@ class SmallShell {
 
 // Auxiliary Functions //
 
-int c_to_int(char* num);
-bool isBuiltIn(char** args);
+int c_to_int(const char* num);
+bool isBuiltIn(std::vector<std::string> args);
 bool compareAlarms(Alarm* alarm_1, Alarm* alarm_2);
-void isTimeout(std::string args);
+void CheckTimeout(std::vector<std::string> args);
 
 #endif  //SMASH_COMMAND_H_
