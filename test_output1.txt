@@ -1,0 +1,4 @@
+smash> smash> smash> smash> added job: 1 with pid: 9194
+smash> added job: 2 with pid: 9195
+smash> smash> 9194: sleep 5&
+9195: sleep 10&

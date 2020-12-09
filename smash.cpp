@@ -27,6 +27,5 @@ int main(int argc, char* argv[]) {
             smash.executeCommand(cmd_line.c_str());
         }
     }
-
     return 0;
 }

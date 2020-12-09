@@ -96,8 +96,9 @@ class ShowPidCommand : public BuiltInCommand {  //Shlomi -- DONE
 };
 
 class QuitCommand : public BuiltInCommand {
-    // TODO: Add your data members public:
-    QuitCommand(const char* cmd_line, JobsList* jobs);
+    bool got_kill;
+   public:
+    QuitCommand(const char* cmd_line, bool kill_cmd) : BuiltInCommand(cmd_line), got_kill(kill_cmd) {}
     virtual ~QuitCommand() {}
     void execute() override;
 };
@@ -326,6 +327,7 @@ class SmallShell {
     pid_t curr_fg_pid;
     ListOfAlarms* list_of_alarms;
     TimedoutList* timed_out_list;
+    pid_t smash_pid;
 
    public:
     bool forked;
@@ -353,6 +355,7 @@ class SmallShell {
     int getFgPid();
     void setFgCommand(std::string cmd_line);
     std::string getFgCommand();
+    pid_t getSmashPid();
 };
 
 // Auxiliary Functions //
