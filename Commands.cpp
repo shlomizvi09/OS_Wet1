@@ -636,7 +636,7 @@ void BackgroundCommand::execute() {
 }
 
 // PipeCommand //
-PipeCommand::PipeCommand(const char* cmd_line) {
+PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line) {
     string full_cmd = string(cmd_line);
     auto pipe_sign_idx = full_cmd.find("|");
     this->left_cmd = full_cmd.substr(0, pipe_sign_idx);
@@ -677,7 +677,6 @@ void PipeCommand::execute() {
             exit(0);
         }
         if (left_cmd_pid == 0) {
-            setpgrp();
             if (this->pipe_type == 0) {
                 if (dup2(fd[1], STDOUT_FILENO) == -1) {
                     perror("smash error: dup2 failed");
@@ -706,7 +705,7 @@ void PipeCommand::execute() {
                 }
             }
             left_cmd->execute();
-            exit(0);
+            //exit(0);
         }
 
         int right_cmd_pid = fork();
@@ -715,7 +714,6 @@ void PipeCommand::execute() {
             exit(0);
         }
         if (right_cmd_pid == 0) {
-            setpgrp();
             if (dup2(fd[0], STDIN_FILENO) == -1) {
                 perror("smash error: dup2 failed");
                 exit(0);
@@ -729,7 +727,7 @@ void PipeCommand::execute() {
                 exit(0);
             }
             right_cmd->execute();
-            exit(0);
+            //exit(0);
         }
 
         if (close(fd[0]) == -1) {
@@ -750,7 +748,7 @@ void PipeCommand::execute() {
             exit(0);
         }
 
-        exit(0);
+        //exit(0);
     }
     if (!is_bg_command) {
         if (waitpid(pipe_pid, nullptr, WUNTRACED) == -1) {
@@ -758,6 +756,7 @@ void PipeCommand::execute() {
             exit(0);
         }
     } else {
+        //picout<< "adding pipe job: "<<this->cmd_line<<" with pid: "<<pipe_pid<<endl;
         sm.getJoblist()->addJob(this->cmd_line, pipe_pid, false);
     }
 }
