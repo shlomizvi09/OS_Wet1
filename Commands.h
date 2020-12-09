@@ -305,6 +305,17 @@ class TimedoutList {
     }
 };
 
+class CpCommand : public BuiltInCommand {
+    bool are_the_same;
+
+   public:
+    std::string source;
+    std::string destination;
+    CpCommand(const char* cmd_line);
+    virtual ~CpCommand(){};
+    void execute() override;
+};
+
 class SmallShell {
    public:
     // TODO: Add your data members
@@ -319,6 +330,7 @@ class SmallShell {
    public:
     bool forked;
     bool timeout;
+    int timeout_duration;
     SmallShell();
     Command* CreateCommand(const char* cmd_line);
     SmallShell(SmallShell const&) = delete;      // disable copy ctor
