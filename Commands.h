@@ -45,11 +45,10 @@ class ExternalCommand : public Command {
 };
 
 class PipeCommand : public Command {
-
    public:
-   std::string left_cmd;
-   std::string right_cmd;
-   int pipe_type; // 0->stdout , 1->stderr
+    std::string left_cmd;
+    std::string right_cmd;
+    int pipe_type;  // 0->stdout , 1->stderr
     PipeCommand(const char* cmd_line);
     virtual ~PipeCommand() {}
     void execute() override;
@@ -58,8 +57,9 @@ class PipeCommand : public Command {
 class RedirectionCommand : public Command {
     std::string cmd;
     std::string dest;
-    bool redirection_type; //0 == >  , 1==>>
+    bool redirection_type;  //0 == >  , 1==>>
     bool is_bg_command;
+
    public:
     explicit RedirectionCommand(const char* cmd_line);
     virtual ~RedirectionCommand() {}
@@ -93,8 +93,9 @@ class ShowPidCommand : public BuiltInCommand {  //Shlomi -- DONE
 };
 
 class QuitCommand : public BuiltInCommand {
-    // TODO: Add your data members public:
-    QuitCommand(const char* cmd_line, JobsList* jobs);
+    bool got_kill;
+   public:
+    QuitCommand(const char* cmd_line, bool kill_cmd) : BuiltInCommand(cmd_line), got_kill(kill_cmd) {}
     virtual ~QuitCommand() {}
     void execute() override;
 };
@@ -131,7 +132,7 @@ class JobsList {
         bool is_stopped;
         time_t create_time;
         std::string cmd_line;
-        JobEntry(int job_id, int pid, bool is_bg_command,bool is_stopped, std::string cmd_line) : job_id(job_id), pid(pid), is_bg_command(is_bg_command), is_stopped(is_stopped), create_time(time(nullptr)), cmd_line(cmd_line) {}
+        JobEntry(int job_id, int pid, bool is_bg_command, bool is_stopped, std::string cmd_line) : job_id(job_id), pid(pid), is_bg_command(is_bg_command), is_stopped(is_stopped), create_time(time(nullptr)), cmd_line(cmd_line) {}
         ~JobEntry() {}
     };
 
@@ -139,7 +140,7 @@ class JobsList {
     std::map<int, JobEntry*> jobs;
     JobsList() : jobs(*(new std::map<int, JobEntry*>())) {}
     ~JobsList() {}
-    void addJob(std::string cmd_line, int pid,bool is_stopped);
+    void addJob(std::string cmd_line, int pid, bool is_stopped);
     void printJobsList();
     void killAllJobs();
     void removeFinishedJobs();
@@ -170,15 +171,16 @@ class KillCommand : public BuiltInCommand {
 
 class ForegroundCommand : public BuiltInCommand {
     int job_id;
+
    public:
-   
-    ForegroundCommand(const char* cmd_line, int job_id) : BuiltInCommand(cmd_line), job_id(job_id){}
+    ForegroundCommand(const char* cmd_line, int job_id) : BuiltInCommand(cmd_line), job_id(job_id) {}
     virtual ~ForegroundCommand() {}
     void execute() override;
 };
 
 class BackgroundCommand : public BuiltInCommand {
     int job_id;
+
    public:
     BackgroundCommand(const char* cmd_line, int job_id) : BuiltInCommand(cmd_line), job_id(job_id) {}
     virtual ~BackgroundCommand() {}
@@ -232,7 +234,7 @@ class SmallShell {
     std::string getOldPwd();
     void changeOldPwd(std::string path);
     JobsList* getJoblist();
-    void setFgPid (int pid);
+    void setFgPid(int pid);
     int getFgPid();
     void setFgCommand(std::string cmd_line);
     std::string getFgCommand();
