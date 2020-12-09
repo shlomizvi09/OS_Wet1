@@ -147,7 +147,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
     }
     if (strcmp(args[0].c_str(), "chprompt") == 0) {
         if (num_of_args <= 1) {
-            this->changePromptName("smash> ");
+            this->changePromptName("smash");
         } else {
             this->changePromptName(args[1]);
         }
@@ -295,7 +295,7 @@ string SmallShell::getFgCommand() {
     return this->curr_fg_command;
 }
 
-pid_t SmallShell::getSmashPid(){
+pid_t SmallShell::getSmashPid() {
     return this->smash_pid;
 }
 // GetCurrDirCommand //
@@ -374,9 +374,8 @@ void JobsList::printJobsList() {
 }
 
 void JobsList::killAllJobs() {
-    if (!jobs.empty()){
-        cout << "sending SIGKILL signal to " << jobs.size() << " jobs" << endl;
-    }   
+    this->removeFinishedJobs();
+    cout << "smash: sending SIGKILL signal to " << jobs.size() << " jobs:" << endl;  
     auto it = jobs.cbegin();
     while (it != jobs.cend()) {
         auto job_to_kill = it;
@@ -398,7 +397,7 @@ void JobsList::removeFinishedJobs() {
         if (waitpid(it->second->pid, nullptr, WNOHANG)) {
             auto job_to_remove = it;
             ++it;
-            cout << "removing: [" << job_to_remove->second->cmd_line << "] with pid: " << job_to_remove->second->pid << endl;
+            // cout << "removing: [" << job_to_remove->second->cmd_line << "] with pid: " << job_to_remove->second->pid << endl;
             delete job_to_remove->second;
             jobs.erase(job_to_remove);
         } else {
@@ -546,8 +545,8 @@ void JobsCommand::execute() {
 // KillCommand //
 
 void KillCommand::execute() {
-    int job_id;
-    int signal_num;
+    int job_id = 0;
+    int signal_num = 0;
     string cmd_string = cmd_line;
     istringstream iss(_trim(cmd_string));
     vector<string> args;
@@ -559,13 +558,13 @@ void KillCommand::execute() {
     }
     int num_of_args = args.size();
     if (num_of_args != 3) {
-        cout << "smash error : kill : invalid arguments " << endl;
+        cout << "smash error: kill: invalid arguments" << endl;
         return;
     }
-    try {
-        signal_num = c_to_int(args[1].c_str());
-        job_id = c_to_int(args[2].c_str());
-    } catch (invalid_argument) {
+
+    signal_num = c_to_int(args[1].c_str());
+    job_id = c_to_int(args[2].c_str());
+    if(job_id<=0 || signal_num >=0){
         cout << "smash error: kill: invalid arguments" << endl;
         return;
     }
@@ -650,7 +649,7 @@ PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line) {
         this->right_cmd = _trim(this->right_cmd);
         this->pipe_type = 0;
     }
-    cout << "cmd1: " << left_cmd << " cmd2: " << right_cmd << ", type: " << pipe_type << endl;
+    //cout << "cmd1: " << left_cmd << " cmd2: " << right_cmd << ", type: " << pipe_type << endl;
 }
 
 void PipeCommand::execute() {
@@ -658,6 +657,19 @@ void PipeCommand::execute() {
     bool is_bg_command = _isBackgroundComamnd(this->right_cmd.c_str());
     Command* left_cmd = sm.CreateCommand(this->left_cmd.c_str());
     Command* right_cmd = sm.CreateCommand(this->right_cmd.c_str());
+    int left_space_idx = this->left_cmd.find(" ");
+    string left_cmd_string = this->left_cmd.substr(0,left_space_idx);
+    int right_space_idx = this->right_cmd.find(" ");
+    string right_cmd_string = this->right_cmd.substr(0,right_space_idx);
+    if (left_cmd_string == "quit"){
+        left_cmd->execute();
+        return;
+    }
+    if (right_cmd_string == "quit"){
+        right_cmd->execute();
+        return;
+    }
+
     sm.forked = true;
     int pipe_pid = fork();
     if (pipe_pid == -1) {
@@ -705,7 +717,7 @@ void PipeCommand::execute() {
                 }
             }
             left_cmd->execute();
-            //exit(0);
+            exit(0);
         }
 
         int right_cmd_pid = fork();
@@ -727,7 +739,7 @@ void PipeCommand::execute() {
                 exit(0);
             }
             right_cmd->execute();
-            //exit(0);
+            exit(0);
         }
 
         if (close(fd[0]) == -1) {
@@ -748,7 +760,7 @@ void PipeCommand::execute() {
             exit(0);
         }
 
-        //exit(0);
+        exit(0);
     }
     if (!is_bg_command) {
         if (waitpid(pipe_pid, nullptr, WUNTRACED) == -1) {
@@ -778,7 +790,7 @@ RedirectionCommand::RedirectionCommand(const char* cmd_line) {
     if (dest.substr(dest.size() - 1, 1) == "&") {
         dest.erase(dest.size() - 1);
     }
-    cout << "cmd1: " << cmd << " cmd2: " << dest << ", type: " << this->redirection_type << endl;
+    //cout << "cmd1: " << cmd << " cmd2: " << dest << ", type: " << this->redirection_type << endl;
 }
 
 void RedirectionCommand::execute() {

@@ -31,10 +31,10 @@ void ctrlZHandler(int sig_num) {
     if (tmp_pid < 1) {
         return;
     }
-    cout << " got ctrl-Z" << endl;
+    cout << "smash: got ctrl-Z" << endl;
     killpg(tmp_pid, SIGSTOP);
     sm.getJoblist()->addJob(sm.getFgCommand().c_str(), tmp_pid, true);
-    cout << "process " << tmp_pid << " was stopped" << endl;
+    cout << "smash: process " << tmp_pid << " was stopped" << endl;
 }
 
 void ctrlCHandler(int sig_num) {
@@ -43,9 +43,9 @@ void ctrlCHandler(int sig_num) {
     if (tmp_pid < 1) {
         return;
     }
-    cout << " got ctrl-C" << endl;
+    cout << "smash: got ctrl-C" << endl;
     killpg(tmp_pid, SIGILL);
-    cout << "process " << tmp_pid << " was killed" << endl;
+    cout << "smash: process " << tmp_pid << " was killed" << endl;
 }
 
 void alarmHandler(int sig_num) {
