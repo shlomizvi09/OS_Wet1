@@ -62,7 +62,7 @@ void alarmHandler(int sig_num) {
             bool is_exit = WIFEXITED(status);
             if (res_pid != -1) {
                 kill(iterator->first, SIGKILL);
-                cout << "smash: timeout " << _trim2(iterator->second->command) << " timed out!" << endl;
+                cout << "smash: timeout " << sm.timeout_duration << " " << _trim2(iterator->second->command) << " timed out!" << endl;
                 sm.job_list->removeJobById(iterator->first);
                 iterator = sm.timed_out_list->timed_dict->erase(iterator);
                 if (sm.timed_out_list->timed_dict->empty()) {
